@@ -75,6 +75,8 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 
 <div class="card next" id="nextCard"></div>
 
+<div class="card" id="goalCard"></div>
+
 <div class="tabs" id="tabs">
   <button data-t="recap" class="on">Recap</button>
   <button data-t="pages">Pages</button>
@@ -102,6 +104,7 @@ const fmt=s=>{if(s==="0")return"Before tracking";const [y,m,d]=s.split("-").map(
 
 let S; // array 0..604; null unread, "0" baseline, else date
 function defaults(){const a=Array(605).fill(null);for(let p=1;p<=575;p++)a[p]="0";return a}
+let G={days:28,start:today()};
 let prev=null, tab="recap", period="all", saveT=null, dbDoc=null;
 
 function surahsOn(p){const r=[];for(let s=1;s<=114;s++)if(p>=START[s]&&p<=END(s))r.push(s);return r}
@@ -112,10 +115,10 @@ const readPages=()=>{const r=[];for(let p=1;p<=604;p++)if(S[p])r.push(p);return 
 const nextUnread=()=>{for(let p=1;p<=604;p++)if(!S[p])return p;return null};
 
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+"-goal",JSON.stringify(G))}catch(e){}
   if(!dbDoc)return;
   clearTimeout(saveT);
-  saveT=setTimeout(()=>{dbDoc.set({pages:JSON.stringify(S),updated:Date.now()}).catch(()=>{})},700);
+  saveT=setTimeout(()=>{dbDoc.set({pages:JSON.stringify(S),goal:JSON.stringify(G),updated:Date.now()}).catch(()=>{})},700);
 }
 function snap(){prev=S.slice()}
 function mark(a,b){snap();const t=today();for(let p=a;p<=b;p++)if(!S[p])S[p]=t;save();render();toast("Marked pages "+(a===b?a:a+"–"+b)+" as read")}
@@ -195,16 +198,37 @@ function renderBackup(){
   <div class="mut" id="bkm" style="margin-top:8px"></div></div>`;
   const ta=document.getElementById("bk"),m=document.getElementById("bkm");
   document.getElementById("ex").onclick=async()=>{
-    ta.value=JSON.stringify({app:"quran-tracker",v:1,pages:S});ta.focus();ta.select();
+    ta.value=JSON.stringify({app:"quran-tracker",v:1,pages:S,goal:G});ta.focus();ta.select();
     let ok=false;try{await navigator.clipboard.writeText(ta.value);ok=true}catch(e){}
     m.textContent=ok?"Copied to clipboard. Paste it somewhere safe.":"Select all in the box and copy it manually."};
   document.getElementById("im").onclick=()=>{
     try{const v=JSON.parse(ta.value);const a=v&&v.pages;
       if(!Array.isArray(a)||a.length!==605)throw 0;
-      snap();S=a;save();render();m.textContent="Imported: "+readPages().length+" pages restored."}
+      snap();S=a;if(v.goal&&v.goal.days>0&&v.goal.start)G=v.goal;save();render();m.textContent="Imported: "+readPages().length+" pages restored."}
     catch(e){m.textContent="That doesn't look like a valid backup."}};
 }
-function render(){renderTop();renderNext();
+const dayNum=s=>{const [y,m,d]=s.split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+function renderGoal(){
+  const el=document.getElementById("goalCard"),t=today();
+  const left=604-readPages().length,doneToday=S.filter(v=>v===t).length;
+  const elapsed=Math.max(0,dayNum(t)-dayNum(G.start)),daysLeft=G.days-elapsed;
+  const deadline=addDays(G.start,G.days-1);
+  let body;
+  if(left===0)body=`<b>🎉 Khatam! Alhamdulillah.</b>`;
+  else if(daysLeft<=0)body=`<b style="color:var(--gold)">Goal date passed</b> · ${left} pages left. Set a new goal below.`;
+  else{
+    const startOfDay=left+doneToday,target=Math.ceil(startOfDay/daysLeft),todo=Math.max(0,target-doneToday);
+    const from=nextUnread();
+    body=`<div style="font-size:13px;color:var(--mute)">Finish by <b style="color:var(--ink)">${fmt(deadline)}</b> · ${daysLeft} day${daysLeft>1?"s":""} left</div>
+    <div style="font-size:20px;font-weight:700;margin:4px 0">${todo>0?"Today: "+todo+" more page"+(todo>1?"s":"")+(from?" (from page "+from+")":""):"✅ Today's target done"}</div>
+    <div class="mut">Target ${target} page${target>1?"s":""}/day · read today ${doneToday}</div>
+    <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,doneToday/target*100)}%"></i></div>`;
+  }
+  el.innerHTML=`<div class="lbl" style="margin-bottom:4px">🎯 Goal</div>${body}
+  <div class="row" style="margin-top:10px;align-items:center"><span class="mut">Finish in</span><input id="gd" type="number" min="1" max="365" value="${G.days}" inputmode="numeric"><span class="mut">days</span><button class="btn sec" id="gs" style="width:auto">Set from today</button></div>`;
+  document.getElementById("gs").onclick=()=>{const v=parseInt(document.getElementById("gd").value);if(v>=1&&v<=365){G={days:v,start:today()};save();render()}};
+}
+function render(){renderTop();renderNext();renderGoal();
   if(tab==="recap")renderRecap();else if(tab==="pages")renderPages();else if(tab==="surah")renderSurah();else renderBackup()}
 
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
@@ -215,6 +239,7 @@ try{if("serviceWorker" in navigator&&location.protocol.startsWith("http"))naviga
 (function init(){
   try{const v=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(v)&&v.length===605)S=v}catch(e){}
   if(!S)S=defaults();
+  try{const g=JSON.parse(localStorage.getItem(KEY+"-goal"));if(g&&g.days>0&&g.start)G=g}catch(e){}
   render();
   (async()=>{
     try{
@@ -225,6 +250,7 @@ try{if("serviceWorker" in navigator&&location.protocol.startsWith("http"))naviga
       const snapD=await ref.get();
       const data=snapD&&(snapD.data?snapD.data():snapD);
       if(data&&data.pages){try{const v=JSON.parse(data.pages);if(Array.isArray(v)&&v.length===605){S=v;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}}catch(e){}}
+      if(data&&data.goal){try{const g=JSON.parse(data.goal);if(g&&g.days>0&&g.start)G=g}catch(e){}}
       dbDoc=ref;
       if(!(data&&data.pages))save();
       render();

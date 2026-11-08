@@ -120,10 +120,10 @@ function save(){
   clearTimeout(saveT);
   saveT=setTimeout(()=>{dbDoc.set({pages:JSON.stringify(S),goal:JSON.stringify(G),updated:Date.now()}).catch(()=>{})},700);
 }
-function snap(){prev=S.slice()}
+function snap(){prev={S:S.slice(),G:JSON.stringify(G)}}
 function mark(a,b){snap();const t=today();for(let p=a;p<=b;p++)if(!S[p])S[p]=t;save();render();toast("Marked pages "+(a===b?a:a+"–"+b)+" as read")}
 function toggle(p){snap();S[p]=S[p]?null:today();save();render()}
-function undo(){if(!prev)return;S=prev;prev=null;save();render();hideToast()}
+function undo(){if(!prev)return;S=prev.S;G=JSON.parse(prev.G);prev=null;save();render();hideToast()}
 let toastT;
 function toast(msg){const el=document.getElementById("toast");el.innerHTML="<span>"+msg+"</span><button id='u'>Undo</button>";el.classList.remove("hide");document.getElementById("u").onclick=undo;clearTimeout(toastT);toastT=setTimeout(hideToast,6000)}
 function hideToast(){document.getElementById("toast").classList.add("hide")}
@@ -207,6 +207,7 @@ function renderBackup(){
       snap();S=a;if(v.goal&&v.goal.days>0&&v.goal.start)G=v.goal;save();render();m.textContent="Imported: "+readPages().length+" pages restored."}
     catch(e){m.textContent="That doesn't look like a valid backup."}};
 }
+let nkArm=false;
 const dayNum=s=>{const [y,m,d]=s.split("-").map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
 function renderGoal(){
   const el=document.getElementById("goalCard"),t=today();
@@ -225,8 +226,16 @@ function renderGoal(){
     <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,doneToday/target*100)}%"></i></div>`;
   }
   el.innerHTML=`<div class="lbl" style="margin-bottom:4px">🎯 Goal</div>${body}
-  <div class="row" style="margin-top:10px;align-items:center"><span class="mut">Finish in</span><input id="gd" type="number" min="1" max="365" value="${G.days}" inputmode="numeric"><span class="mut">days</span><button class="btn sec" id="gs" style="width:auto">Set from today</button></div>`;
-  document.getElementById("gs").onclick=()=>{const v=parseInt(document.getElementById("gd").value);if(v>=1&&v<=365){G={days:v,start:today()};save();render()}};
+  <div class="row" style="margin-top:10px;align-items:center"><span class="mut">Finish in</span><input id="gd" type="number" min="1" max="365" value="${G.days}" inputmode="numeric"><span class="mut">days</span><button class="btn sec" id="gs" style="width:auto">Set from today</button></div>
+  <button class="btn sec" id="nk" style="margin-top:8px">${nkArm?"Tap again to confirm: start new khatam":"🔄 Start new khatam"+(G.k&&G.k.length?" (#"+(G.k.length+2)+")":"")}</button>
+  <div class="mut" style="margin-top:6px">Current: Khatam #${(G.k?G.k.length:0)+1}${G.k&&G.k.length?" · finished before: "+G.k.map(k=>"#"+k.n+" ("+k.pages+" pp, "+k.ended+")").join(", "):""}</div>`;
+  document.getElementById("nk").onclick=()=>{
+    if(!nkArm){nkArm=true;renderGoal();setTimeout(()=>{if(nkArm){nkArm=false;renderGoal()}},5000);return}
+    nkArm=false;snap();const k=G.k||[];const v=parseInt(document.getElementById("gd").value);
+    k.push({n:k.length+1,ended:today(),pages:readPages().length});
+    S=Array(605).fill(null);G={days:(v>=1&&v<=365)?v:28,start:today(),k};save();render();
+    toast("New khatam started — "+G.days+" days, "+Math.ceil(604/G.days)+" pages/day")};
+  document.getElementById("gs").onclick=()=>{const v=parseInt(document.getElementById("gd").value);if(v>=1&&v<=365){G={days:v,start:today(),k:G.k||[]};save();render()}};
 }
 function render(){renderTop();renderNext();renderGoal();
   if(tab==="recap")renderRecap();else if(tab==="pages")renderPages();else if(tab==="surah")renderSurah();else renderBackup()}

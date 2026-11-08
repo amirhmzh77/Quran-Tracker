@@ -79,11 +79,13 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
   <button data-t="recap" class="on">Recap</button>
   <button data-t="pages">Pages</button>
   <button data-t="surah">Surah</button>
+  <button data-t="backup">Backup</button>
 </div>
 
 <div id="recap"></div>
 <div id="pages" class="hide"></div>
 <div id="surah" class="hide"></div>
+<div id="backup" class="hide"></div>
 
 <div id="toast" class="toast hide"></div>
 
@@ -184,12 +186,30 @@ function renderSurah(){
     h+=`<div class="srow"><div class="h"><span>${s}. ${NAMES[s-1]} ${c===tot?"✅":""}</span><span>Juz ${juzOf(a)}${juzOf(b)!==juzOf(a)?"–"+juzOf(b):""} · p.${a}${b>a?"–"+b:""} · ${c}/${tot}</span></div><div class="bar"><i style="width:${pc}%"></i></div></div>`}
   document.getElementById("surah").innerHTML=h+"</div>";
 }
+function renderBackup(){
+  const el=document.getElementById("backup");
+  if(el.dataset.ready)return;el.dataset.ready=1;
+  el.innerHTML=`<div class="card"><b>Backup &amp; restore</b><div class="mut" style="margin:6px 0 10px">Export your progress as text and keep it safe (Notes, WhatsApp to yourself). Paste it back and tap Import to restore, or to move to another phone.</div>
+  <textarea id="bk" rows="6" style="width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:10px;font:12px monospace" placeholder="Export fills this box. To restore, paste your backup here."></textarea>
+  <div class="row" style="margin-top:8px"><button class="btn" id="ex">Export</button><button class="btn sec" id="im">Import</button></div>
+  <div class="mut" id="bkm" style="margin-top:8px"></div></div>`;
+  const ta=document.getElementById("bk"),m=document.getElementById("bkm");
+  document.getElementById("ex").onclick=async()=>{
+    ta.value=JSON.stringify({app:"quran-tracker",v:1,pages:S});ta.focus();ta.select();
+    let ok=false;try{await navigator.clipboard.writeText(ta.value);ok=true}catch(e){}
+    m.textContent=ok?"Copied to clipboard. Paste it somewhere safe.":"Select all in the box and copy it manually."};
+  document.getElementById("im").onclick=()=>{
+    try{const v=JSON.parse(ta.value);const a=v&&v.pages;
+      if(!Array.isArray(a)||a.length!==605)throw 0;
+      snap();S=a;save();render();m.textContent="Imported: "+readPages().length+" pages restored."}
+    catch(e){m.textContent="That doesn't look like a valid backup."}};
+}
 function render(){renderTop();renderNext();
-  if(tab==="recap")renderRecap();else if(tab==="pages")renderPages();else renderSurah()}
+  if(tab==="recap")renderRecap();else if(tab==="pages")renderPages();else if(tab==="surah")renderSurah();else renderBackup()}
 
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
   tab=b.dataset.t;document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b));
-  ["recap","pages","surah"].forEach(id=>document.getElementById(id).classList.toggle("hide",id!==tab));render()});
+  ["recap","pages","surah","backup"].forEach(id=>document.getElementById(id).classList.toggle("hide",id!==tab));render()});
 
 try{if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 (function init(){

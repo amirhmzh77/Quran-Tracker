@@ -150,9 +150,12 @@ function renderTop(){
 function renderNext(){
   const el=document.getElementById("nextCard"),p=nextUnread();
   if(!p){el.innerHTML="<b>Alhamdulillah — all 604 pages read.</b>";return}
-  el.innerHTML=`<div class="lbl">Next page</div><div style="font-size:22px;font-weight:700">Page ${p}</div><div class="mut">${surahTxt([p])} · Juz ${juzOf(p)}</div>
-  <button class="btn" id="fin">✓ Finished page ${p}</button>
-  <div class="row"><input id="upto" type="number" min="${p}" max="604" inputmode="numeric" placeholder="Finished up to page…"><button class="btn sec" id="go" style="width:auto">Mark</button></div>`;
+  const rp=readPages(),lastP=rp.length?Math.max(...rp):0;
+  el.innerHTML=`<div class="lbl">${lastP?"You last finished page "+lastP:"Not started yet"}</div>
+  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>
+  <button class="btn" id="fin">✓ I've read page ${p}</button>
+  <div class="lbl" style="margin-top:2px">Read several pages? Enter the last page you finished:</div>
+  <div class="row"><input id="upto" type="number" min="${p}" max="604" inputmode="numeric" placeholder="e.g. ${Math.min(604,p+4)}"><button class="btn sec" id="go" style="width:auto">Save pages ${p}–…</button></div>`;
   document.getElementById("fin").onclick=()=>mark(p,p);
   document.getElementById("go").onclick=()=>{const v=parseInt(document.getElementById("upto").value);if(v>=p&&v<=604)mark(p,v)};
 }

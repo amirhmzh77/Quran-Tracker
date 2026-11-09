@@ -61,6 +61,9 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 .toast{position:fixed;left:14px;right:14px;bottom:14px;max-width:612px;margin:auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;z-index:9}
 .toast button{background:none;border:0;color:var(--gold);font-weight:700;font-size:15px}
 .hide{display:none}
+.cell.sh{position:relative}.cell.sh::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#4a7bd0}
+.legend{font-size:12px;color:var(--mute);margin:4px 0 8px}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4a7bd0;margin-right:4px}
+details.sp{margin:6px 0 10px;font-size:13px}details.sp summary{color:var(--green);font-weight:600}details.sp div{padding:3px 0;border-top:1px solid var(--line)}
 .lnk{border:1px solid var(--line);background:var(--bg);color:var(--green);border-radius:20px;padding:8px 14px;font-size:14px;text-decoration:none;font-weight:600}
 .mut{color:var(--mute);font-size:12px}
 </style>
@@ -98,8 +101,10 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 
 <script>
 const NAMES="Al-Fatihah,Al-Baqarah,Ali 'Imran,An-Nisa',Al-Ma'idah,Al-An'am,Al-A'raf,Al-Anfal,At-Taubah,Yunus,Hud,Yusuf,Ar-Ra'd,Ibrahim,Al-Hijr,An-Nahl,Al-Isra',Al-Kahf,Maryam,Taha,Al-Anbiya',Al-Hajj,Al-Mu'minun,An-Nur,Al-Furqan,Ash-Shu'ara',An-Naml,Al-Qasas,Al-'Ankabut,Ar-Rum,Luqman,As-Sajdah,Al-Ahzab,Saba',Fatir,Ya-Sin,As-Saffat,Sad,Az-Zumar,Ghafir,Fussilat,Ash-Shura,Az-Zukhruf,Ad-Dukhan,Al-Jathiyah,Al-Ahqaf,Muhammad,Al-Fath,Al-Hujurat,Qaf,Adh-Dhariyat,At-Tur,An-Najm,Al-Qamar,Ar-Rahman,Al-Waqi'ah,Al-Hadid,Al-Mujadilah,Al-Hashr,Al-Mumtahanah,As-Saff,Al-Jumu'ah,Al-Munafiqun,At-Taghabun,At-Talaq,At-Tahrim,Al-Mulk,Al-Qalam,Al-Haqqah,Al-Ma'arij,Nuh,Al-Jinn,Al-Muzzammil,Al-Muddaththir,Al-Qiyamah,Al-Insan,Al-Mursalat,An-Naba',An-Nazi'at,'Abasa,At-Takwir,Al-Infitar,Al-Mutaffifin,Al-Inshiqaq,Al-Buruj,At-Tariq,Al-A'la,Al-Ghashiyah,Al-Fajr,Al-Balad,Ash-Shams,Al-Layl,Ad-Duha,Ash-Sharh,At-Tin,Al-'Alaq,Al-Qadr,Al-Bayyinah,Az-Zalzalah,Al-'Adiyat,Al-Qari'ah,At-Takathur,Al-'Asr,Al-Humazah,Al-Fil,Quraysh,Al-Ma'un,Al-Kawthar,Al-Kafirun,An-Nasr,Al-Masad,Al-Ikhlas,Al-Falaq,An-Nas".split(",");
-const START=[0,1,2,50,77,106,128,151,177,187,208,221,235,249,255,262,267,282,293,305,312,322,332,342,350,359,367,377,385,396,404,411,415,418,428,434,440,446,453,458,467,477,483,489,496,499,502,507,511,515,518,520,523,526,528,531,534,537,542,545,549,551,553,554,556,558,560,562,564,566,568,570,572,574,575,577,578,580,582,583,585,586,587,587,589,590,591,591,592,593,594,595,595,596,596,597,597,598,598,599,599,600,600,601,601,601,602,602,602,603,603,603,604,604,604];
-const END=s=>s===114?604:Math.max(START[s],START[s+1]-1);
+const START=[0,1,2,50,77,106,128,151,177,187,208,221,235,249,255,262,267,282,293,305,312,322,332,342,350,359,367,377,385,396,404,411,415,418,428,434,440,446,453,458,467,477,483,489,496,499,502,507,511,515,518,520,523,526,528,531,534,537,542,545,549,551,553,554,556,558,560,562,564,566,569,570,572,574,575,577,578,580,582,583,585,586,587,587,589,590,591,591,592,593,594,595,595,596,596,597,597,598,598,599,599,600,600,601,601,601,602,602,602,603,603,603,604,604,604];
+const SHARED=new Set([4,10,11,13,15,17,19,24,27,28,29,34,35,38,39,42,45,50,51,53,54,55,56,58,60,62,67,68,69,70,73,74,82,86,91,93,95,97,99,101,103,104,106,107,109,110,112,113]);
+const END=s=>s===114?604:SHARED.has(s)?START[s+1]:Math.max(START[s],START[s+1]-1);
+const sharedAt=p=>{const r=surahsOn(p);return r.length>1?r:null};
 const juzRange=j=>[j===1?1:20*(j-1)+2, j===30?604:20*j+1];
 const KEY="quran-tracker-v1";
 const pad=n=>String(n).padStart(2,"0");
@@ -152,7 +157,7 @@ function renderNext(){
   if(!p){el.innerHTML="<b>Alhamdulillah — all 604 pages read.</b>";return}
   const rp=readPages(),lastP=rp.length?Math.max(...rp):0;
   el.innerHTML=`<div class="lbl">${lastP?"You last finished page "+lastP:"Not started yet"}</div>
-  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>
+  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>${sharedAt(p)?`<div style="font-size:13px;color:#4a7bd0">● Shared page: ${sharedAt(p).map(x=>NAMES[x-1]).join(" → ")}</div>`:""}
   <button class="btn" id="fin">✓ I've read page ${p}</button>
   <div class="lbl" style="margin-top:2px">Read several pages? Enter the last page you finished:</div>
   <div class="row"><input id="upto" type="number" min="${p}" max="604" inputmode="numeric" placeholder="e.g. ${Math.min(604,p+4)}"><button class="btn sec" id="go" style="width:auto">Save pages ${p}–…</button></div>`;
@@ -183,10 +188,12 @@ function renderRecap(){
   el.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{period=b.dataset.p;renderRecap()});
 }
 function renderPages(){
-  const el=document.getElementById("pages"),n=nextUnread(),t=today();let h=`<div class="mut" style="margin-bottom:4px">Tap a page to mark / unmark. Gold = read today. Outlined = next.</div><div class="juz">`;
+  const el=document.getElementById("pages"),n=nextUnread(),t=today();const sp=[];for(let q=1;q<=604;q++){const x=sharedAt(q);if(x)sp.push([q,x])}
+  let h=`<div class="mut" style="margin-bottom:4px">Tap a page to mark / unmark. Gold = read today. Outlined = next.</div><div class="legend"><i></i>Blue dot = page shared by two or more surahs</div>
+  <details class="sp"><summary>Shared pages (${sp.length})</summary>${sp.map(([q,r])=>`<div>Page <b>${q}</b>: ${r.map(x=>x+". "+NAMES[x-1]).join(" · ")}</div>`).join("")}</details><div class="juz">`;
   for(let j=1;j<=30;j++){const [a,b]=juzRange(j);let c=0;for(let p=a;p<=b;p++)if(S[p])c++;
     h+=`<h3><span>Juz ${j}</span><span>${c}/${b-a+1}</span></h3><div class="grid">`;
-    for(let p=a;p<=b;p++){const cls=S[p]===t?"t":S[p]?"r":"";h+=`<button class="cell ${cls} ${p===n?"n":""}" data-p="${p}">${p}</button>`}
+    for(let p=a;p<=b;p++){const cls=S[p]===t?"t":S[p]?"r":"";h+=`<button class="cell ${cls} ${p===n?"n":""} ${sharedAt(p)?"sh":""}" data-p="${p}">${p}</button>`}
     h+=`</div>`}
   el.innerHTML=h+"</div>";
   el.querySelectorAll(".cell").forEach(b=>b.onclick=()=>toggle(+b.dataset.p));

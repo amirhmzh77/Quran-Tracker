@@ -61,6 +61,7 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 .toast{position:fixed;left:14px;right:14px;bottom:14px;max-width:612px;margin:auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;z-index:9}
 .toast button{background:none;border:0;color:var(--gold);font-weight:700;font-size:15px}
 .hide{display:none}
+.cell.pt{background:linear-gradient(135deg,var(--green2) 50%,var(--un) 50%);color:var(--green);font-weight:600}
 .cell.sh{position:relative}.cell.sh::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--dot)}
 .legend{font-size:12px;color:var(--mute);margin:4px 0 8px}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dot);margin-right:4px}
 details.sp{margin:6px 0 10px;font-size:13px}details.sp summary{color:var(--green);font-weight:600}details.sp div{padding:3px 0;border-top:1px solid var(--line)}
@@ -120,7 +121,9 @@ let prev=null, tab="recap", period="all", saveT=null, dbDoc=null;
 function surahsOn(p){const r=[];for(let s=1;s<=114;s++)if(p>=START[s]&&p<=END(s))r.push(s);return r}
 function runs(ps){ps=[...ps].sort((a,b)=>a-b);const o=[];let a=null,b=null;for(const p of ps){if(a===null){a=b=p}else if(p===b+1){b=p}else{o.push([a,b]);a=b=p}}if(a!==null)o.push([a,b]);return o}
 const runTxt=r=>r.map(([a,b])=>a===b?""+a:a+"–"+b).join(", ");
-function surahTxt(ps){const set=[];ps.forEach(p=>surahsOn(p).forEach(s=>{if(!set.includes(s))set.push(s)}));set.sort((a,b)=>a-b);if(!set.length)return"";const nm=s=>s+". "+NAMES[s-1];if(set.length<=3)return set.map(nm).join(" → ");return nm(set[0])+" → "+nm(set[set.length-1])+" ("+set.length+" surahs)"}
+function surahTxt(ps,all){const set=[];ps.forEach(p=>surahsOn(p).forEach(s=>{if((all||doneFor(p,s))&&!set.includes(s))set.push(s)}));set.sort((a,b)=>a-b);if(!set.length)return"";const nm=s=>s+". "+NAMES[s-1];if(set.length<=3)return set.map(nm).join(" → ");return nm(set[0])+" → "+nm(set[set.length-1])+" ("+set.length+" surahs)"}
+const pt=()=>G.pt||(G.pt={});
+const doneFor=(p,s2)=>!!S[p]||(pt()[p]&&surahsOn(p).indexOf(s2)<pt()[p].k&&surahsOn(p).indexOf(s2)>=0);
 const readPages=()=>{const r=[];for(let p=1;p<=604;p++)if(S[p])r.push(p);return r};
 const nextUnread=()=>{for(let p=1;p<=604;p++)if(!S[p])return p;return null};
 
@@ -131,14 +134,19 @@ function save(){
   saveT=setTimeout(()=>{dbDoc.set({pages:JSON.stringify(S),goal:JSON.stringify(G),updated:Date.now()}).catch(()=>{})},700);
 }
 function snap(){prev={S:S.slice(),G:JSON.stringify(G)}}
-function mark(a,b){snap();const t=today();for(let p=a;p<=b;p++)if(!S[p])S[p]=t;save();render();toast("Marked pages "+(a===b?a:a+"–"+b)+" as read")}
-function toggle(p){snap();S[p]=S[p]?null:today();save();render()}
+function mark(a,b){snap();const t=today();for(let p=a;p<=b;p++){if(!S[p])S[p]=t;delete pt()[p]}save();render();toast("Marked pages "+(a===b?a:a+"–"+b)+" as read")}
+function toggle(p){snap();const r=surahsOn(p);
+  if(S[p]){S[p]=null;delete pt()[p]}
+  else if(r.length>1){const k=pt()[p]?pt()[p].k:0;if(k+1<r.length)pt()[p]={k:k+1,d:today()};else{S[p]=today();delete pt()[p]}}
+  else S[p]=today();
+  save();render()}
+function markPartial(p,k){snap();pt()[p]={k,d:today()};save();render();toast("Page "+p+": finished "+surahsOn(p).slice(0,k).map(x=>NAMES[x-1]).join(", ")+" only")}
 function undo(){if(!prev)return;S=prev.S;G=JSON.parse(prev.G);prev=null;save();render();hideToast()}
 let toastT;
 function toast(msg){const el=document.getElementById("toast");el.innerHTML="<span>"+msg+"</span><button id='u'>Undo</button>";el.classList.remove("hide");document.getElementById("u").onclick=undo;clearTimeout(toastT);toastT=setTimeout(hideToast,6000)}
 function hideToast(){document.getElementById("toast").classList.add("hide")}
 
-function streak(){const days=new Set(S.filter(v=>v&&v!=="0"));let t=today();if(!days.has(t))t=addDays(t,-1);let n=0;while(days.has(t)){n++;t=addDays(t,-1)}return n}
+function streak(){const days=new Set(S.filter(v=>v&&v!=="0"));Object.values(pt()).forEach(o=>days.add(o.d));let t=today();if(!days.has(t))t=addDays(t,-1);let n=0;while(days.has(t)){n++;t=addDays(t,-1)}return n}
 
 function renderTop(){
   const n=readPages().length, left=604-n, pct=n/604*100;
@@ -156,11 +164,18 @@ function renderNext(){
   const el=document.getElementById("nextCard"),p=nextUnread();
   if(!p){el.innerHTML="<b>Alhamdulillah — all 604 pages read.</b>";return}
   const rp=readPages(),lastP=rp.length?Math.max(...rp):0;
+  const r=surahsOn(p),part=pt()[p],nm=x=>x+". "+NAMES[x-1];
+  let note="",extra="";
+  if(part){const dn=r.slice(0,part.k),rest=r.slice(part.k);
+    note=`<div style="font-size:13px;color:var(--dot)">● Already finished here: ${dn.map(nm).join(", ")}. Continue with ${rest.map(nm).join(", ")}</div>`}
+  else if(r.length>1){note=`<div style="font-size:13px;color:var(--dot)">● Shared page: ${r.map(nm).join(" → ")}</div>`;
+    extra=r.slice(0,-1).map((x,i)=>`<button class="btn sec" data-pk="${i+1}">Stop after ${nm(x)} (continue later)</button>`).join("")}
   el.innerHTML=`<div class="lbl">${lastP?"You last finished page "+lastP:"Not started yet"}</div>
-  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>${sharedAt(p)?`<div style="font-size:13px;color:var(--dot)">● Shared page: ${sharedAt(p).map(x=>NAMES[x-1]).join(" → ")}</div>`:""}
-  <button class="btn" id="fin">✓ I've read page ${p}</button>
+  <div style="font-size:13px;color:var(--mute)">${part?"Continue":"Up next"}</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${part?r.slice(part.k).map(nm).join(", "):surahTxt([p],true)} · Juz ${juzOf(p)}</div>${note}
+  <button class="btn" id="fin">✓ ${part?"I've read the rest of page "+p:"I've read page "+p}</button>${extra}
   <div class="lbl" style="margin-top:2px">Read several pages? Enter the last page you finished:</div>
   <div class="row"><input id="upto" type="number" min="${p}" max="604" inputmode="numeric" placeholder="e.g. ${Math.min(604,p+4)}"><button class="btn sec" id="go" style="width:auto">Save pages ${p}–…</button></div>`;
+  el.querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>markPartial(p,+b.dataset.pk));
   document.getElementById("fin").onclick=()=>mark(p,p);
   document.getElementById("go").onclick=()=>{const v=parseInt(document.getElementById("upto").value);if(v>=p&&v<=604)mark(p,v)};
 }
@@ -179,6 +194,8 @@ function renderRecap(){
   <div class="sum"><div><strong>${total}</strong>pages</div><div><strong>${shown.length}</strong>days</div><div><strong>${(total/Math.max(1,period==="today"?1:period==="7"?7:period==="30"?30:shown.length)).toFixed(1)}</strong>pages/day</div></div>`;
   if(total)h+=`<div class="mut" style="margin-bottom:6px">Covered: <b style="color:var(--ink)">${runTxt(runs(allPs))}</b><br>${surahTxt(allPs)}</div>`;
   else h+=`<div class="mut">No pages logged in this period.</div>`;
+  const pe=Object.entries(pt());
+  if(pe.length)h+=`<div class="mut" style="margin-top:8px">Partly read: ${pe.map(([q,o])=>"page "+q+" ("+surahsOn(+q).slice(0,o.k).map(x=>NAMES[x-1]).join(", ")+" done)").join("; ")}</div>`;
   h+=`</div><div class="card">`;
   if(!dates.length)h+=`<div class="mut">No sessions yet — tap “Finished page” above after you read.</div>`;
   dates.slice(0,60).forEach(d=>{const ps=by[d];h+=`<div class="day"><div class="d">${d===t?"Today":fmt(d)} <span class="mut">· ${ps.length} page${ps.length>1?"s":""}</span></div><div class="p">Pages ${runTxt(runs(ps))}</div><div class="s">${surahTxt(ps)}</div></div>`});
@@ -189,18 +206,18 @@ function renderRecap(){
 }
 function renderPages(){
   const el=document.getElementById("pages"),n=nextUnread(),t=today();const sp=[];for(let q=1;q<=604;q++){const x=sharedAt(q);if(x)sp.push([q,x])}
-  let h=`<div class="mut" style="margin-bottom:4px">Tap a page to mark / unmark. Gold = read today. Outlined = next.</div><div class="legend"><i></i>Blue dot = page shared by two or more surahs</div>
+  let h=`<div class="mut" style="margin-bottom:4px">Tap a page to mark / unmark. Gold = read today. Outlined = next.</div><div class="legend"><i></i>Blue dot = page shared by two or more surahs · half-filled = only the first surah(s) read</div>
   <details class="sp"><summary>Shared pages (${sp.length})</summary>${sp.map(([q,r])=>`<div>Page <b>${q}</b>: ${r.map(x=>x+". "+NAMES[x-1]).join(" · ")}</div>`).join("")}</details><div class="juz">`;
   for(let j=1;j<=30;j++){const [a,b]=juzRange(j);let c=0;for(let p=a;p<=b;p++)if(S[p])c++;
     h+=`<h3><span>Juz ${j}</span><span>${c}/${b-a+1}</span></h3><div class="grid">`;
-    for(let p=a;p<=b;p++){const cls=S[p]===t?"t":S[p]?"r":"";h+=`<button class="cell ${cls} ${p===n?"n":""} ${sharedAt(p)?"sh":""}" data-p="${p}">${p}</button>`}
+    for(let p=a;p<=b;p++){const cls=S[p]===t?"t":S[p]?"r":pt()[p]?"pt":"";h+=`<button class="cell ${cls} ${p===n?"n":""} ${sharedAt(p)?"sh":""}" data-p="${p}">${p}</button>`}
     h+=`</div>`}
   el.innerHTML=h+"</div>";
   el.querySelectorAll(".cell").forEach(b=>b.onclick=()=>toggle(+b.dataset.p));
 }
 function renderSurah(){
   let h=`<div class="card">`;
-  for(let s=1;s<=114;s++){const a=START[s],b=END(s);let c=0;for(let p=a;p<=b;p++)if(S[p])c++;const tot=b-a+1,pc=c/tot*100;
+  for(let s=1;s<=114;s++){const a=START[s],b=END(s);let c=0;for(let p=a;p<=b;p++)if(doneFor(p,s))c++;const tot=b-a+1,pc=c/tot*100;
     h+=`<div class="srow"><div class="h"><span>${s}. ${NAMES[s-1]} ${c===tot?"✅":""}</span><span>Juz ${juzOf(a)}${juzOf(b)!==juzOf(a)?"–"+juzOf(b):""} · p.${a}${b>a?"–"+b:""} · ${c}/${tot}</span></div><div class="bar"><i style="width:${pc}%"></i></div></div>`}
   document.getElementById("surah").innerHTML=h+"</div>";
 }
@@ -209,7 +226,7 @@ const SUM_MS=["Doa pembuka: memuji Allah, menyembah-Nya semata-mata dan memohon 
 let LANG="en";try{LANG=localStorage.getItem("quran-lang")||"en"}catch(e){}
 function sumData(){
   const L=LANG==="ms"?SUM_MS:SUM_EN,done=[],part=[];
-  for(let s=1;s<=114;s++){const a=START[s],b=END(s);let c=0;for(let p=a;p<=b;p++)if(S[p])c++;
+  for(let s=1;s<=114;s++){const a=START[s],b=END(s);let c=0;for(let p=a;p<=b;p++)if(doneFor(p,s))c++;
     if(c===b-a+1)done.push(s);else if(c>0)part.push([s,c,b-a+1])}
   return {L,done,part};
 }
@@ -281,7 +298,7 @@ function renderGoal(){
     k.push({n:k.length+1,ended:today(),pages:readPages().length});
     S=Array(605).fill(null);G={days:(v>=1&&v<=365)?v:28,start:today(),k};save();render();
     toast("New khatam started — "+G.days+" days, "+Math.ceil(604/G.days)+" pages/day")};
-  document.getElementById("gs").onclick=()=>{const v=parseInt(document.getElementById("gd").value);if(v>=1&&v<=365){G={days:v,start:today(),k:G.k||[]};save();render()}};
+  document.getElementById("gs").onclick=()=>{const v=parseInt(document.getElementById("gd").value);if(v>=1&&v<=365){G={days:v,start:today(),k:G.k||[],pt:G.pt||{}};save();render()}};
 }
 function renderReadRow(){
   const el=document.getElementById("readRow"),p=nextUnread()||604;

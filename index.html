@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quran Reading Tracker</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1f7a5a">
+<meta name="theme-color" content="#a9e0cb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Quran Tracker">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-:root{--bg:#f6f4ee;--card:#fff;--ink:#1d2a24;--mute:#6b7a72;--line:#e3e0d6;--green:#1f7a5a;--green2:#cfe9dd;--gold:#d99a1e;--gold2:#f8e7bd;--un:#ebe8de}
-@media (prefers-color-scheme:dark){:root{--bg:#121816;--card:#1b2420;--ink:#e8efe9;--mute:#93a39a;--line:#2b3731;--green:#3fb589;--green2:#1f4a3a;--gold:#e8b44a;--gold2:#4d3b14;--un:#27322c}}
+:root{--bg:#f8f4fc;--card:#ffffff;--ink:#3b3a4f;--mute:#8d8aa6;--line:#ebe5f3;--green:#4fae92;--green2:#d6f1e6;--gold:#f6c98a;--gold2:#fdeed3;--un:#eeeaf6;--btn:#a9e0cb;--btnink:#254a3d;--dot:#8fb4ee}
+@media (prefers-color-scheme:dark){:root{--bg:#211f30;--card:#2c2a3f;--ink:#efecf8;--mute:#aaa6c4;--line:#3d3a56;--green:#8fd6b8;--green2:#3a5a52;--gold:#f2c98a;--gold2:#4c4230;--un:#37344f;--btn:#7fcbb0;--btnink:#17342b;--dot:#9bbcf2}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:14px 14px 60px;max-width:640px;margin:0 auto}
 h1{font-size:18px;margin:0 0 2px}
@@ -26,7 +26,7 @@ h1{font-size:18px;margin:0 0 2px}
 .stats div{font-size:12px;color:var(--mute)}
 .stats strong{display:block;font-size:17px;color:var(--ink)}
 .next{display:flex;flex-direction:column;gap:10px}
-.btn{border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:600;background:var(--green);color:#fff;width:100%}
+.btn{border:0;border-radius:12px;padding:14px;font-size:16px;font-weight:600;background:var(--btn);color:var(--btnink);width:100%}
 .btn.sec{background:var(--un);color:var(--ink);font-size:14px;padding:10px}
 .btn:active{opacity:.8}
 .row{display:flex;gap:8px}
@@ -34,7 +34,7 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 .lbl{font-size:12px;color:var(--mute)}
 .tabs{display:flex;gap:6px;margin:4px 0 12px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:5}
 .tabs button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px;border-radius:10px;font-size:14px}
-.tabs button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.tabs button.on{background:var(--btn);color:var(--btnink);border-color:var(--btn)}
 .chips{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .chips button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:20px;padding:6px 12px;font-size:13px}
 .chips button.on{background:var(--gold2);border-color:var(--gold)}
@@ -50,10 +50,10 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:5px}
 .cell{aspect-ratio:1;border-radius:8px;background:var(--un);border:0;color:var(--mute);font-size:12px;padding:0}
 .cell.r{background:var(--green2);color:var(--green);font-weight:600}
-.cell.t{background:var(--gold);color:#fff;font-weight:700}
+.cell.t{background:var(--gold);color:#5a3d0a;font-weight:700}
 .cell.n{outline:2px solid var(--green)}
 .bar{height:8px;background:var(--un);border-radius:6px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--green)}
+.bar i{display:block;height:100%;background:var(--btn)}
 .srow{padding:8px 0;border-top:1px solid var(--line)}
 .srow:first-child{border-top:0}
 .srow .h{display:flex;justify-content:space-between;margin-bottom:4px;font-size:14px}
@@ -61,8 +61,8 @@ input[type=number]{flex:1;min-width:0;border:1px solid var(--line);background:va
 .toast{position:fixed;left:14px;right:14px;bottom:14px;max-width:612px;margin:auto;background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;z-index:9}
 .toast button{background:none;border:0;color:var(--gold);font-weight:700;font-size:15px}
 .hide{display:none}
-.cell.sh{position:relative}.cell.sh::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#4a7bd0}
-.legend{font-size:12px;color:var(--mute);margin:4px 0 8px}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4a7bd0;margin-right:4px}
+.cell.sh{position:relative}.cell.sh::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--dot)}
+.legend{font-size:12px;color:var(--mute);margin:4px 0 8px}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--dot);margin-right:4px}
 details.sp{margin:6px 0 10px;font-size:13px}details.sp summary{color:var(--green);font-weight:600}details.sp div{padding:3px 0;border-top:1px solid var(--line)}
 .lnk{border:1px solid var(--line);background:var(--bg);color:var(--green);border-radius:20px;padding:8px 14px;font-size:14px;text-decoration:none;font-weight:600}
 .mut{color:var(--mute);font-size:12px}
@@ -73,7 +73,7 @@ details.sp{margin:6px 0 10px;font-size:13px}details.sp summary{color:var(--green
 <div class="sub" id="sub"></div>
 
 <div class="card top">
-  <div class="ring"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="44" fill="none" stroke="var(--un)" stroke-width="10"/><circle id="arc" cx="52" cy="52" r="44" fill="none" stroke="var(--green)" stroke-width="10" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg><b id="pct">0%<small>of 604</small></b></div>
+  <div class="ring"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="44" fill="none" stroke="var(--un)" stroke-width="10"/><circle id="arc" cx="52" cy="52" r="44" fill="none" stroke="var(--btn)" stroke-width="10" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg><b id="pct">0%<small>of 604</small></b></div>
   <div class="stats" id="stats"></div>
 </div>
 
@@ -157,7 +157,7 @@ function renderNext(){
   if(!p){el.innerHTML="<b>Alhamdulillah — all 604 pages read.</b>";return}
   const rp=readPages(),lastP=rp.length?Math.max(...rp):0;
   el.innerHTML=`<div class="lbl">${lastP?"You last finished page "+lastP:"Not started yet"}</div>
-  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>${sharedAt(p)?`<div style="font-size:13px;color:#4a7bd0">● Shared page: ${sharedAt(p).map(x=>NAMES[x-1]).join(" → ")}</div>`:""}
+  <div style="font-size:13px;color:var(--mute)">Up next</div><div style="font-size:24px;font-weight:700;margin-top:-6px">Page ${p}</div><div class="mut" style="margin-top:-6px">${surahTxt([p])} · Juz ${juzOf(p)}</div>${sharedAt(p)?`<div style="font-size:13px;color:var(--dot)">● Shared page: ${sharedAt(p).map(x=>NAMES[x-1]).join(" → ")}</div>`:""}
   <button class="btn" id="fin">✓ I've read page ${p}</button>
   <div class="lbl" style="margin-top:2px">Read several pages? Enter the last page you finished:</div>
   <div class="row"><input id="upto" type="number" min="${p}" max="604" inputmode="numeric" placeholder="e.g. ${Math.min(604,p+4)}"><button class="btn sec" id="go" style="width:auto">Save pages ${p}–…</button></div>`;
